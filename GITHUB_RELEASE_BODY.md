@@ -1,4 +1,4 @@
-# Home Assistant Multi-Zone Heating v1.1.2
+# Home Assistant Multi-Zone Heating v1.1.3
 
 A screenshot and responsive-layout maintenance release.
 

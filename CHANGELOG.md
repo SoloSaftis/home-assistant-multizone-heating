@@ -1,6 +1,14 @@
 # Changelog
 
-## 1.1.2
+## 1.1.3
+
+- Rebuilt all README screenshots using browser-calculated element bounds.
+- Full desktop overview now captures the complete page.
+- Zone-card screenshot includes complete cards through their lowest controls and details.
+- Presence-controls screenshot includes both control panels and the complete summary row.
+- Mobile screenshot is a true full-page capture with no clipped lower content.
+
+## 1.1.3
 
 * Regenerated all dashboard screenshots from the real populated demo.
 * Fixed card, button, metric and long-text overflow at desktop and mobile widths.

@@ -94,7 +94,7 @@ The dashboard stores a Home Assistant Long-Lived Access Token in browser local s
 
 ## Required schedule and lockout helpers
 
-Every zone automation expects four schedule `input_number` helpers and two lockout `input_boolean` helpers. Version 1.1.2 includes complete generic examples and refreshed overflow-safe screenshots:
+Every zone automation expects four schedule `input_number` helpers and two lockout `input_boolean` helpers. Version 1.1.3 includes complete generic examples and refreshed overflow-safe screenshots:
 
 * `examples/input_numbers.example.yaml`
 * `examples/input_booleans.example.yaml`

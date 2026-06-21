@@ -2,7 +2,9 @@
 
 A reusable YAML framework and standalone dashboard for room-by-room heating schedules, presence-based setback, safety lockouts and thermostat correction.
 
-![Dashboard overview](docs/images/dashboard-overview.png)
+![Full desktop dashboard overview](docs/images/dashboard-overview.png)
+
+The desktop overview is a true full-page capture. It includes the complete presence controls, summary cards, every zone card, all schedule controls, action buttons, and the lower troubleshooting sections without cropping.
 
 ## What it does
 
@@ -17,7 +19,9 @@ A reusable YAML framework and standalone dashboard for room-by-room heating sche
 
 ### Whole-home status and presence controls
 
-![Presence controls and summary](docs/images/dashboard-presence-controls.png)
+![Complete presence controls and summary](docs/images/dashboard-presence-controls.png)
+
+This focused screenshot includes the entire control panel and every summary card. No lower controls are cut off.
 
 The header shows Home Assistant connectivity, physical presence, the active schedule period and the next period change. The three presence-mode buttons do not modify physical tracking:
 
@@ -27,9 +31,11 @@ The header shows Home Assistant connectivity, physical presence, the active sche
 
 The summary cards show active zones, lockouts, average measured temperature, open contacts and the exact elapsed time away.
 
-### Zone cards and interlock explanations
+### Complete zone cards and interlock explanations
 
-![Zone cards and interlock status](docs/images/dashboard-zone-cards.png)
+![Complete zone cards and interlock status](docs/images/dashboard-zone-cards.png)
+
+The zone-card screenshot is captured using the browser-calculated bounds of the full zone section. Each card is shown from its title through the schedule controls, action buttons, and expandable entity-details row.
 
 Each zone card contains:
 
@@ -41,11 +47,24 @@ Each zone card contains:
 6. Zone-level automation, lockout and quick-temperature controls
 7. Expandable entity details for troubleshooting
 
-### Mobile layout
+### Full mobile layout
 
-![Mobile dashboard](docs/images/dashboard-mobile.png)
+![Full mobile dashboard](docs/images/dashboard-mobile.png)
+
+The mobile screenshot is a full-page capture rather than a fixed-height crop, so the lower controls and final zone cards remain visible.
 
 The layout collapses to one column on phones while retaining all controls and diagnostics. Long status text, entity IDs and buttons remain contained within their cards.
+
+## Screenshot files
+
+The repository includes four documentation images:
+
+| File | Purpose |
+|---|---|
+| `docs/images/dashboard-overview.png` | Full desktop page with all cards and controls |
+| `docs/images/dashboard-presence-controls.png` | Complete presence-mode and summary section |
+| `docs/images/dashboard-zone-cards.png` | Full zone section with lower controls included |
+| `docs/images/dashboard-mobile.png` | Full mobile page capture |
 
 ## What information you need
 

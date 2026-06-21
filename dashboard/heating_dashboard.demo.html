@@ -1,0 +1,1381 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heating Dashboard</title>
+  <style>
+    :root {
+      --ha-bg: #111111;
+      --ha-card-bg: #1c1c1c;
+      --ha-card-bg-soft: #171717;
+      --stroke: #333333;
+      --stroke-soft: rgba(255, 255, 255, 0.1);
+      --text: #e1e1e1;
+      --muted: #9b9b9b;
+      --muted2: #666666;
+
+      --color-morning: #f3d479;
+      --color-midday: #62d7ff;
+      --color-evening: #8a9cff;
+      --color-night: #64a8ff;
+
+      --blue: #64a8ff;
+      --green: #70e0b8;
+      --red: #ff7f8f;
+      --yellow: #f3d479;
+      --orange: #ffb86b;
+      --purple: #b39cff;
+
+      --radius-xl: 12px;
+      --radius-lg: 10px;
+      --radius-md: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      background-color: var(--ha-bg);
+    }
+
+    .app { max-width: 1600px; margin: 0 auto; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 16px;
+    }
+
+    h1 { margin: 0; font-size: 28px; font-weight: 400; }
+    .subtitle { color: var(--muted); font-size: 14px; margin-top: 4px; line-height: 1.45; }
+    .period-line { color: var(--text); font-size: 13px; }
+
+    .pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .pill, .summary-card, .zone, .auth-card, .global-actions {
+      background-color: var(--ha-card-bg);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius-xl);
+    }
+
+    .pill { padding: 6px 12px; font-size: 12px; display: flex; gap: 8px; white-space: nowrap; }
+    .pill strong.ok { color: var(--green); }
+    .pill strong.warn { color: var(--yellow); }
+    .pill strong.bad { color: var(--red); }
+
+    .auth-card {
+      display: none;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .auth-card.show { display: block; }
+
+    .auth-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    input {
+      background: #111;
+      color: var(--text);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius-md);
+      padding: 10px;
+    }
+
+    .global-actions {
+      padding: 14px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .global-title { font-weight: 700; font-size: 14px; }
+    .global-note { color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.35; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .summary-card { padding: 16px; }
+    .summary-card .label { color: var(--muted); font-size: 11px; text-transform: uppercase; font-weight: 600; }
+    .summary-card .value { font-size: 28px; font-weight: 500; margin-top: 4px; }
+    .summary-card .note { font-size: 11px; color: var(--muted2); margin-top: 4px; line-height: 1.35; }
+
+    .floor-title {
+      margin: 32px 0 16px;
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--text);
+      border-bottom: 1px solid var(--stroke);
+      padding-bottom: 8px;
+    }
+
+    .zones {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+
+    .zone {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .zone.locked { border-color: rgba(243, 212, 121, 0.55); }
+    .zone.alarm { border-color: rgba(255, 127, 143, 0.7); }
+    .zone.away { border-color: rgba(100, 168, 255, 0.45); }
+
+    .zone-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .zone-name-wrap { display: flex; min-width: 0; }
+
+    .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.05);
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      margin-right: 12px;
+      flex: 0 0 auto;
+    }
+
+    .zone-title { font-weight: 600; font-size: 16px; }
+
+    .active-input-pill {
+      margin-top: 8px;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      background: rgba(0,0,0,0.3);
+      border-left: 3px solid var(--stroke);
+    }
+
+    .active-input-pill.morning { border-left-color: var(--color-morning); }
+    .active-input-pill.midday  { border-left-color: var(--color-midday); }
+    .active-input-pill.evening { border-left-color: var(--color-evening); }
+    .active-input-pill.night   { border-left-color: var(--color-night); }
+
+    .active-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .active-value { font-size: 14px; font-weight: 600; margin-top: 2px; }
+
+    .badges {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
+      flex: 0 0 auto;
+    }
+
+    .badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge.on { background: rgba(112, 224, 184, 0.1); color: var(--green); }
+    .badge.off { background: rgba(255, 127, 143, 0.1); color: var(--red); }
+    .badge.warn { background: rgba(243, 212, 121, 0.12); color: var(--yellow); }
+    .badge.blue { background: rgba(100, 168, 255, 0.12); color: var(--blue); }
+
+    .status-panel {
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: rgba(0,0,0,0.22);
+      border: 1px solid var(--stroke-soft);
+    }
+
+    .status-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 10px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .reason-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .reason {
+      padding: 7px 8px;
+      border-radius: 7px;
+      background: rgba(255,255,255,0.04);
+      border-left: 3px solid var(--stroke);
+    }
+
+    .reason.ok { border-left-color: var(--green); color: var(--green); }
+    .reason.warn { border-left-color: var(--yellow); color: var(--yellow); }
+    .reason.bad { border-left-color: var(--red); color: var(--red); }
+    .reason.info { border-left-color: var(--blue); color: var(--blue); }
+
+    .temps {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 0.95fr) minmax(122px, 1.35fr);
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .metric {
+      background: rgba(0,0,0,0.2);
+      padding: 14px 8px;
+      border-radius: var(--radius-md);
+      text-align: center;
+      border: 1px solid var(--stroke-soft);
+      min-width: 0;
+    }
+
+    .metric.rate-metric { padding-left: 10px; padding-right: 10px; }
+
+    .metric .k {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .metric .v {
+      font-size: 20px;
+      font-weight: 600;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric.rate-metric .v {
+      font-size: 18px;
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    .metric.temp-heat .v { color: var(--red); }
+    .metric.temp-cool .v { color: var(--blue); }
+
+    .setpoints {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .sp {
+      padding: 10px;
+      border-radius: var(--radius-md);
+      background: rgba(0,0,0,0.15);
+      border: 1px solid transparent;
+    }
+
+    .sp label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .sp.current-period {
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .stepper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button {
+      background: #2a2a2a;
+      border: 1px solid var(--stroke);
+      color: var(--text);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover { background: #333; border-color: #444; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .stepper button {
+      width: 28px;
+      height: 28px;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+
+    .sp-value { font-weight: 600; font-size: 14px; white-space: nowrap; }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-action {
+      padding: 12px;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .btn-action.primary {
+      grid-column: span 2;
+      background: #3a3a3a;
+      border-color: var(--blue);
+    }
+
+    .btn-action.away-btn { border-left: 4px solid var(--blue); }
+    .btn-action.home-btn { border-left: 4px solid var(--green); }
+    .btn-action.active-state { border-left: 4px solid var(--green); }
+    .btn-action.inactive-state { border-left: 4px solid var(--red); }
+    .btn-action.warn-state { border-left: 4px solid var(--yellow); }
+
+    details { margin-top: 10px; font-size: 12px; color: var(--muted); }
+    summary { cursor: pointer; padding: 4px 0; outline: none; }
+
+    .entity-list {
+      padding: 10px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      margin-top: 5px;
+      line-height: 1.6;
+    }
+
+    code {
+      color: var(--blue);
+      font-family: monospace;
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      width: min(430px, calc(100vw - 32px));
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(28, 28, 28, 0.96);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+      color: var(--text);
+      animation: toastIn 0.22s ease-out;
+      pointer-events: auto;
+      backdrop-filter: blur(14px);
+    }
+
+    .toast.warn { border-left: 4px solid var(--yellow); }
+    .toast.error { border-left: 4px solid var(--red); }
+    .toast.ok { border-left: 4px solid var(--green); }
+
+    .toast-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .toast-message {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 10px; }
+      .topbar { flex-direction: column; align-items: flex-start; }
+      .pills { justify-content: flex-start; }
+      .pill { white-space: normal; }
+      .global-actions { grid-template-columns: 1fr; }
+      .zones { grid-template-columns: 1fr; }
+      .temps { grid-template-columns: 1fr; }
+      .setpoints { grid-template-columns: 1fr; }
+      .actions { grid-template-columns: 1fr; }
+      .btn-action.primary { grid-column: auto; }
+      .auth-row { grid-template-columns: 1fr; }
+      .toast-wrap { right: 12px; bottom: 12px; left: 12px; }
+      .toast { width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+<main class="app">
+  <section class="topbar">
+    <div>
+      <h1>Heating Dashboard</h1>
+      <p class="subtitle">
+        System overview, schedule management, manual lockout, automatic safety lockout, away status and quick global temperature modes.<br>
+        <span id="currentPeriodLabel" class="period-line">Loading schedule...</span>
+      </p>
+    </div>
+    <div class="pills">
+      <div class="pill">HA: <strong id="haStatus">...</strong></div>
+      <div class="pill">Presence: <strong id="presenceStatus">...</strong></div>
+      <div class="pill">Period: <strong id="currentPeriodShort">...</strong></div>
+      <div class="pill">Next switch: <strong id="nextPeriodSwitch">...</strong></div>
+      <div class="pill">Last update: <strong id="updatedAt">...</strong></div>
+    </div>
+  </section>
+
+  <section id="authCard" class="auth-card">
+    <strong>Home Assistant token needed</strong>
+    <div class="auth-row">
+      <input id="tokenInput" type="password" placeholder="Paste Long-Lived Access Token">
+      <button id="saveTokenBtn">Save token</button>
+      <button id="clearTokenBtn">Clear</button>
+    </div>
+  </section>
+
+  <section class="global-actions">
+    <div>
+      <div class="global-title">Heating presence mode</div>
+      <div class="global-note">Automatic uses the 24-hour timer. Force Away uses 15°C. Force Home ignores the away setback and returns every room to its own chosen schedule without forcing 21°C.</div>
+    </div>
+    <button id="modeAutomaticBtn" class="btn-action" onclick="setHeatingPresenceMode('Automatic')">🤖 Automatic</button>
+    <button id="modeAwayBtn" class="btn-action away-btn" onclick="setHeatingPresenceMode('Force Away')">🌙 Force Away 15°C</button>
+    <button id="modeHomeBtn" class="btn-action home-btn" onclick="setHeatingPresenceMode('Force Home')">🏠 Force Home · chosen schedule</button>
+  </section>
+
+  <section class="global-actions">
+    <div>
+      <div class="global-title">Global schedule rewrite</div>
+      <div class="global-note">These buttons permanently set morning, midday, evening and night helpers for every zone, then apply the selected value now.</div>
+    </div>
+    <button class="btn-action away-btn" onclick="setAllZonesTo(15)">🌙 Set all schedules to 15°C</button>
+    <button class="btn-action home-btn" onclick="setAllZonesTo(21)">🏠 Set all schedules to 21°C</button>
+  </section>
+
+  <section class="summary-grid">
+    <article class="summary-card">
+      <div class="label">Active Zones</div>
+      <div class="value" id="activeZones">0</div>
+      <div class="note">Automations running</div>
+    </article>
+
+    <article class="summary-card">
+      <div class="label">Lockouts</div>
+      <div class="value" id="lockoutCount">0</div>
+      <div class="note">Manual + automatic</div>
+    </article>
+
+    <article class="summary-card">
+      <div class="label">Avg Temp</div>
+      <div class="value" id="avgIndoor">--</div>
+      <div class="note">Measured average from zone temp references</div>
+    </article>
+
+    <article class="summary-card">
+      <div class="label">Open Contacts</div>
+      <div class="value" id="openDoors">0</div>
+      <div class="note">Doors/windows open</div>
+    </article>
+
+    <article class="summary-card">
+      <div class="label">Away Status</div>
+      <div class="value" id="awaySummary">--</div>
+      <div class="note" id="awaySummaryNote">Stored presence status</div>
+      <div class="note" id="awayTimeNote">Time away: --</div>
+      <div class="note" id="leftHomeNote">Left home: --</div>
+      <div class="note" id="awayModeNote">Heating presence mode: --</div>
+    </article>
+  </section>
+
+  <div id="dashboard"></div>
+  <div id="toastWrap" class="toast-wrap"></div>
+</main>
+
+<script>
+const HA_BASE = window.location.origin;
+const TOKEN_KEY = "ha_multizone_heating_token_v1";
+const PHONE_ENTITY = "person.resident";
+const LEFT_HOME_ENTITY = "input_datetime.resident_left_home";
+const AWAY_TRACKING_ENTITY = "input_boolean.resident_away_tracking_active";
+const HEATING_MODE_ENTITY = "input_select.heating_presence_mode";
+const AWAY_TIME_ENTITY = "sensor.resident_time_away";
+const AWAY_OVER_24H_ENTITY = "binary_sensor.resident_away_over_24_hours";
+const HEATING_AWAY_ENTITY = "binary_sensor.heating_away_mode_active";
+const AWAY_SETPOINT = 15;
+const HOME_SETPOINT = 21;
+const RAPID_DROP_LIMIT = -0.08;
+const VERY_RAPID_DROP_LIMIT = -0.15;
+
+const stateMap = new Map();
+const openDetails = new Set();
+
+const zones = [
+  {
+    floor: "Upper Floor",
+    name: "Guest Bedroom",
+    icon: "🛏️",
+    automation: "automation.guest_bedroom_heating_master",
+    lockout: "input_boolean.guest_bedroom_heating_lockout_manual",
+    autoLockout: "input_boolean.guest_bedroom_heating_lockout",
+    heaters: ["climate.guest_bedroom_heater"],
+    tempRef: "sensor.guest_bedroom_average_temperature",
+    rate: "sensor.guest_bedroom_temperature_rate",
+    contacts: [
+      "binary_sensor.guest_bedroom_window_left",
+      "binary_sensor.guest_bedroom_window_right"
+    ],
+    inputs: {
+      morning: "input_number.guest_bedroom_temp_morning",
+      midday: "input_number.guest_bedroom_temp_midday",
+      evening: "input_number.guest_bedroom_temp_evening",
+      night: "input_number.guest_bedroom_temp_night"
+    },
+    sensors: [
+      "sensor.guest_bedroom_temperature_primary",
+      "sensor.guest_bedroom_temperature_secondary"
+    ]
+  },
+  {
+    floor: "Upper Floor",
+    name: "Main Bathroom",
+    icon: "🚿",
+    automation: "automation.main_bathroom_heating_master",
+    lockout: "input_boolean.main_bathroom_heating_lockout_manual",
+    autoLockout: "input_boolean.main_bathroom_heating_lockout",
+    heaters: ["climate.main_bathroom_floor"],
+    tempRef: "sensor.main_bathroom_average_temperature",
+    rate: "sensor.main_bathroom_temperature_rate",
+    contacts: ["binary_sensor.main_bathroom_window"],
+    inputs: {
+      morning: "input_number.main_bathroom_temp_morning",
+      midday: "input_number.main_bathroom_temp_midday",
+      evening: "input_number.main_bathroom_temp_evening",
+      night: "input_number.main_bathroom_temp_night"
+    },
+    sensors: [
+      "sensor.guest_bedroom_temperature_primary",
+      "sensor.main_bathroom_temperature_secondary"
+    ]
+  },
+  {
+    floor: "Main Floor",
+    name: "Living Room & Kitchen",
+    icon: "🛋️",
+    automation: "automation.living_room_kitchen_heating_master",
+    lockout: "input_boolean.living_room_kitchen_heating_lockout_manual",
+    autoLockout: "input_boolean.living_room_kitchen_heating_lockout",
+    heaters: [
+      "climate.living_room_heater_left",
+      "climate.living_room_heater_right"
+    ],
+    tempRef: "sensor.living_room_kitchen_average_temperature",
+    rate: "sensor.living_room_kitchen_temperature_rate",
+    contacts: ["binary_sensor.living_room_window"],
+    inputs: {
+      morning: "input_number.living_room_kitchen_temp_morning",
+      midday: "input_number.living_room_kitchen_temp_midday",
+      evening: "input_number.living_room_kitchen_temp_evening",
+      night: "input_number.living_room_kitchen_temp_night"
+    },
+    sensors: [
+      "sensor.living_room_temperature_secondary",
+      "sensor.living_room_temperature_primary",
+      "sensor.living_room_temperature_third",
+      "sensor.kitchen_temperature"
+    ]
+  },
+  {
+    floor: "Ground Floor",
+    name: "Downstairs Bathroom",
+    icon: "🛁",
+    automation: "automation.downstairs_bathroom_heating_master",
+    lockout: "input_boolean.downstairs_bathroom_heating_lockout_manual",
+    autoLockout: "input_boolean.downstairs_bathroom_heating_lockout",
+    heaters: ["climate.downstairs_bathroom_floor"],
+    tempRef: "sensor.downstairs_bathroom_temperature",
+    rate: "sensor.downstairs_bathroom_temperature_rate",
+    contacts: [],
+    inputs: {
+      morning: "input_number.downstairs_bathroom_temp_morning",
+      midday: "input_number.downstairs_bathroom_temp_midday",
+      evening: "input_number.downstairs_bathroom_temp_evening",
+      night: "input_number.downstairs_bathroom_temp_night"
+    },
+    sensors: ["sensor.downstairs_bathroom_temperature"]
+  },
+  {
+    floor: "Ground Floor",
+    name: "Entryway",
+    icon: "🚪",
+    automation: "automation.entryway_heating_master",
+    lockout: "input_boolean.entryway_heating_lockout_manual",
+    autoLockout: "input_boolean.entryway_heating_lockout",
+    heaters: ["climate.entryway_heater"],
+    tempRef: "sensor.entryway_average_temperature",
+    rate: "sensor.entryway_temperature_rate",
+    contacts: ["binary_sensor.entryway_door"],
+    inputs: {
+      morning: "input_number.entryway_temp_morning",
+      midday: "input_number.entryway_temp_midday",
+      evening: "input_number.entryway_temp_evening",
+      night: "input_number.entryway_temp_night"
+    },
+    sensors: [
+      "sensor.entryway_temperature_primary",
+      "sensor.entryway_temperature_secondary",
+      "sensor.entryway_temperature_third"
+    ]
+  },
+  {
+    floor: "Ground Floor",
+    name: "Main Bedroom",
+    icon: "🛌",
+    automation: "automation.main_bedroom_heating_master",
+    lockout: "input_boolean.main_bedroom_heating_lockout_manual",
+    autoLockout: "input_boolean.main_bedroom_heating_lockout",
+    heaters: ["climate.main_bedroom_heater"],
+    tempRef: "sensor.main_bedroom_average_temperature",
+    rate: "sensor.main_bedroom_temperature_rate",
+    contacts: [],
+    inputs: {
+      morning: "input_number.main_bedroom_temp_morning",
+      midday: "input_number.main_bedroom_temp_midday",
+      evening: "input_number.main_bedroom_temp_evening",
+      night: "input_number.main_bedroom_temp_night"
+    },
+    sensors: [
+      "sensor.main_bedroom_temperature_primary",
+      "sensor.main_bedroom_temperature_secondary"
+    ]
+  }
+];
+
+const el = id => document.getElementById(id);
+
+function token() { return localStorage.getItem(TOKEN_KEY) || ""; }
+function headers() { return { "Authorization": `Bearer ${token()}`, "Content-Type": "application/json" }; }
+function entity(id) { return stateMap.get(id); }
+function st(id) { return entity(id)?.state ?? "unknown"; }
+function attr(id, name) { return entity(id)?.attributes?.[name]; }
+function num(id) { const value = Number(st(id)); return Number.isFinite(value) ? value : NaN; }
+function numberAttr(id, name, fallback) { const value = Number(attr(id, name)); return Number.isFinite(value) ? value : fallback; }
+function decimalsFromStep(step) { if (!Number.isFinite(step) || step <= 0) return 1; const text = String(step); return text.includes(".") ? text.split(".")[1].length : 0; }
+function isOn(id) { return st(id) === "on"; }
+function isInvalid(id) { return ["unknown", "unavailable", "none", ""].includes(st(id)); }
+function friendly(id) { return attr(id, "friendly_name") || id; }
+function fmtTemp(value) { return Number.isFinite(value) ? `${value.toFixed(1)}°C` : "--"; }
+function fmtRate(value) { return Number.isFinite(value) ? `${value.toFixed(3)}°C/min` : "--"; }
+function formatClock() { return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }); }
+
+function formatDateTime(value) {
+  if (!value || ["unknown", "unavailable", "none", ""].includes(String(value))) return "--";
+  const normalized = String(value).includes("T") ? String(value) : String(value).replace(" ", "T");
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString([], {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function getPeriod(date = new Date()) {
+  const h = date.getHours();
+  if (h >= 8 && h < 12) return "morning";
+  if (h >= 12 && h < 15) return "midday";
+  if (h >= 15 && h < 22) return "evening";
+  return "night";
+}
+
+function periodInfo(date = new Date()) {
+  const period = getPeriod(date);
+  const ranges = { morning: "08:00 to 12:00", midday: "12:00 to 15:00", evening: "15:00 to 22:00", night: "22:00 to 08:00" };
+  const nextPeriods = { morning: "midday", midday: "evening", evening: "night", night: "morning" };
+  const nextSwitch = new Date(date);
+  nextSwitch.setSeconds(0, 0);
+
+  if (period === "morning") nextSwitch.setHours(12, 0, 0, 0);
+  else if (period === "midday") nextSwitch.setHours(15, 0, 0, 0);
+  else if (period === "evening") nextSwitch.setHours(22, 0, 0, 0);
+  else {
+    nextSwitch.setHours(8, 0, 0, 0);
+    if (date.getHours() >= 22) nextSwitch.setDate(nextSwitch.getDate() + 1);
+  }
+
+  const msUntil = Math.max(0, nextSwitch - date);
+  const totalMinutes = Math.ceil(msUntil / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const countdown = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  return { period, range: ranges[period], nextPeriod: nextPeriods[period], nextSwitch, countdown };
+}
+
+function minutesSince(entityId) {
+  const lastChanged = entity(entityId)?.last_changed;
+  if (!lastChanged) return NaN;
+  const ms = Date.now() - new Date(lastChanged).getTime();
+  return Number.isFinite(ms) ? ms / 60000 : NaN;
+}
+
+function formatDurationMinutes(minutes) {
+  if (!Number.isFinite(minutes)) return "unknown time";
+  if (minutes < 1) return "less than 1 minute";
+  if (minutes < 60) return `${Math.floor(minutes)} min`;
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.floor(minutes % 60);
+  if (hours < 24) return mins ? `${hours}h ${mins}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours ? `${days}d ${remHours}h` : `${days}d`;
+}
+
+function awayInfo() {
+  const phoneState = st(PHONE_ENTITY);
+  const trackerKnown = !isInvalid(PHONE_ENTITY);
+  const trackingActive = isOn(AWAY_TRACKING_ENTITY);
+  const awayHours = num(AWAY_TIME_ENTITY);
+  const mins = Number.isFinite(awayHours) ? awayHours * 60 : NaN;
+  const formattedAwayRaw = attr(AWAY_TIME_ENTITY, "formatted");
+  const leftHomeRaw = st(LEFT_HOME_ENTITY) !== "unknown"
+    ? st(LEFT_HOME_ENTITY)
+    : attr(AWAY_TIME_ENTITY, "left_home_at");
+  const leftHomeFormatted = formatDateTime(leftHomeRaw);
+  const selectedMode = st(HEATING_MODE_ENTITY);
+  const automaticAway = isOn(AWAY_OVER_24H_ENTITY);
+  const heatingAway = isOn(HEATING_AWAY_ENTITY);
+  const awayMode = attr(HEATING_AWAY_ENTITY, "mode") || "automatic_home";
+  const forceAway = selectedMode === "Force Away";
+  const forceHome = selectedMode === "Force Home";
+  const away = trackingActive;
+  const formattedAway =
+    formattedAwayRaw && !["unknown", "unavailable", "none", ""].includes(String(formattedAwayRaw))
+      ? String(formattedAwayRaw)
+      : formatDurationMinutes(mins);
+
+  return {
+    phoneState, trackerKnown, trackingActive, away, awayLong: automaticAway,
+    automaticAway, heatingAway, awayMode, selectedMode, forceAway, forceHome,
+    mins, awayHours, formattedAway, leftHomeRaw, leftHomeFormatted
+  };
+}
+
+function updatePeriodLabels() {
+  const now = new Date();
+  const info = periodInfo(now);
+  const switchTime = info.nextSwitch.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const currentPeriodLabel = el("currentPeriodLabel");
+  const currentPeriodShort = el("currentPeriodShort");
+  const nextPeriodSwitch = el("nextPeriodSwitch");
+  if (currentPeriodLabel) currentPeriodLabel.textContent = `Now using ${info.period} schedule, ${info.range}. Next: ${info.nextPeriod} at ${switchTime}.`;
+  if (currentPeriodShort) currentPeriodShort.textContent = `${info.period} ${info.range}`;
+  if (nextPeriodSwitch) nextPeriodSwitch.textContent = `${info.nextPeriod} ${switchTime}, ${info.countdown}`;
+}
+
+function updatePresenceLabels() {
+  const info = awayInfo();
+  const presenceStatus = el("presenceStatus");
+  if (!presenceStatus) return;
+
+  presenceStatus.className = "";
+
+  if (info.awayLong) {
+    presenceStatus.textContent = `Away ${info.formattedAway}`;
+    presenceStatus.classList.add("bad");
+  } else if (info.away) {
+    presenceStatus.textContent = `Away ${info.formattedAway}`;
+    presenceStatus.classList.add("warn");
+  } else if (info.phoneState === "home") {
+    presenceStatus.textContent = "Home";
+    presenceStatus.classList.add("ok");
+  } else if (!info.trackerKnown) {
+    presenceStatus.textContent = "Tracker unknown";
+    presenceStatus.classList.add("warn");
+  } else {
+    presenceStatus.textContent = "Home";
+    presenceStatus.classList.add("ok");
+  }
+}
+
+function updateClock() {
+  const updatedAt = el("updatedAt");
+  if (updatedAt) updatedAt.textContent = formatClock();
+  updatePeriodLabels();
+  updatePresenceLabels();
+}
+
+function calcAvg(ids) {
+  const values = ids.map(num).filter(Number.isFinite);
+  return values.length ? values.reduce((a, b) => a + b, 0) / values.length : NaN;
+}
+
+function zoneTemp(zone) {
+  const ref = num(zone.tempRef);
+  return Number.isFinite(ref) ? ref : calcAvg(zone.sensors || []);
+}
+
+function heaterSetNow(zone) {
+  const values = zone.heaters.map(h => Number(attr(h, "temperature"))).filter(Number.isFinite);
+  return values.length ? values.reduce((a, b) => a + b, 0) / values.length : NaN;
+}
+
+function tempStateClass(zone, measuredTemp, activeInput, isAuto, manualLocked, autoLocked) {
+  if (!isAuto || manualLocked || autoLocked) return "";
+  if (!Number.isFinite(measuredTemp) || !Number.isFinite(activeInput)) return "";
+  if (measuredTemp < activeInput - 0.4) return "temp-heat";
+  if (measuredTemp > activeInput + 0.4) return "temp-cool";
+  return "";
+}
+
+function anyDetailsOpen() { return openDetails.size > 0; }
+
+function zoneContactOpenIds(zone) {
+  return zone.contacts.filter(isOn);
+}
+
+function zoneContactBadIds(zone) {
+  return zone.contacts.filter(isInvalid);
+}
+
+function zoneInterlockReasons(zone) {
+  const reasons = [];
+  const manualLocked = isOn(zone.lockout);
+  const autoLocked = isOn(zone.autoLockout);
+  const tempBad = isInvalid(zone.tempRef);
+  const rate = num(zone.rate);
+  const rapidDrop = Number.isFinite(rate) && rate < RAPID_DROP_LIMIT;
+  const veryRapidDrop = Number.isFinite(rate) && rate < VERY_RAPID_DROP_LIMIT;
+  const openContacts = zoneContactOpenIds(zone);
+  const badContacts = zoneContactBadIds(zone);
+  const away = awayInfo();
+
+  if (manualLocked) {
+    reasons.push({ type: "bad", text: "Manual lockout is enabled." });
+  }
+
+  if (openContacts.length) {
+    reasons.push({ type: "bad", text: `Open contact: ${openContacts.map(friendly).join(", ")}.` });
+  }
+
+  if (badContacts.length) {
+    reasons.push({ type: "bad", text: `Invalid contact sensor: ${badContacts.map(friendly).join(", ")}.` });
+  }
+
+  if (tempBad) {
+    reasons.push({ type: "bad", text: `Invalid temperature reference: ${friendly(zone.tempRef)}.` });
+  }
+
+  if (veryRapidDrop) {
+    reasons.push({ type: "bad", text: `Very rapid temperature drop: ${fmtRate(rate)}.` });
+  } else if (rapidDrop) {
+    reasons.push({ type: "warn", text: `Rapid temperature drop delays recovery: ${fmtRate(rate)}.` });
+  }
+
+  if (autoLocked && !openContacts.length && !badContacts.length && !tempBad && !veryRapidDrop) {
+    reasons.push({ type: "warn", text: "Automatic lockout is active, waiting for recovery conditions." });
+  }
+
+  if (autoLocked && zone.contacts.length && !openContacts.length && !badContacts.length) {
+    const newestClosed = Math.min(...zone.contacts.map(minutesSince).filter(Number.isFinite));
+    if (Number.isFinite(newestClosed) && newestClosed < 2) {
+      reasons.push({ type: "warn", text: `Contact recently closed. Recovery delay remaining about ${Math.ceil(2 - newestClosed)} min.` });
+    }
+  }
+
+  if (away.forceAway) {
+    reasons.push({
+      type: "info",
+      text: "Force Away is selected. The shared 15°C target is active, while automatic presence tracking continues independently."
+    });
+  }
+
+  if (away.forceHome) {
+    reasons.push({
+      type: "ok",
+      text: "Force Home is selected. Away setback is ignored and this room uses its chosen scheduled setpoint."
+    });
+  }
+
+  if (away.automaticAway) {
+    reasons.push({
+      type: "info",
+      text: `Automatic 24-hour away condition is active. Away for ${away.formattedAway}, since ${away.leftHomeFormatted}.`
+    });
+  } else if (away.away) {
+    reasons.push({
+      type: "info",
+      text: `Away for ${away.formattedAway}, since ${away.leftHomeFormatted}. Automatic setback starts after 24h.`
+    });
+  } else if (!away.trackerKnown) {
+    reasons.push({
+      type: "warn",
+      text: "Phone tracker is unavailable or unknown. The selected heating presence mode remains independent."
+    });
+  }
+
+  if (!reasons.length) {
+    reasons.push({ type: "ok", text: "No interlock cause detected." });
+  }
+
+  return reasons;
+}
+
+function showToast(title, message, type = "warn") {
+  const wrap = el("toastWrap");
+  if (!wrap) return;
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<div class="toast-title">${escapeHtml(title)}</div><div class="toast-message">${escapeHtml(message)}</div>`;
+  wrap.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = "0"; toast.style.transform = "translateY(8px) scale(0.98)"; toast.style.transition = "all 0.2s ease"; }, 3200);
+  setTimeout(() => { toast.remove(); }, 3500);
+}
+
+function render() {
+  const root = el("dashboard");
+  if (!root) return;
+
+  const curP = getPeriod();
+  const presence = awayInfo();
+  const activeCount = zones.filter(z => isOn(z.automation)).length;
+  const manualLocks = zones.filter(z => isOn(z.lockout)).length;
+  const autoLocks = zones.filter(z => isOn(z.autoLockout)).length;
+  const doorsCount = zones.flatMap(z => z.contacts).filter(isOn).length;
+  const allTemps = zones.map(zoneTemp).filter(Number.isFinite);
+  const avgT = allTemps.length ? allTemps.reduce((a, b) => a + b, 0) / allTemps.length : NaN;
+
+  if (el("activeZones")) el("activeZones").textContent = `${activeCount}/${zones.length}`;
+  if (el("lockoutCount")) el("lockoutCount").textContent = `${manualLocks + autoLocks}`;
+  if (el("openDoors")) el("openDoors").textContent = doorsCount;
+  if (el("avgIndoor")) el("avgIndoor").textContent = fmtTemp(avgT);
+
+  if (el("awaySummary")) {
+    if (presence.forceAway) el("awaySummary").textContent = "Force Away";
+    else if (presence.forceHome) el("awaySummary").textContent = "Force Home";
+    else if (presence.automaticAway) el("awaySummary").textContent = "Auto Away >24h";
+    else if (presence.away) el("awaySummary").textContent = "Away";
+    else if (presence.phoneState === "home") el("awaySummary").textContent = "Home";
+    else if (!presence.trackerKnown) el("awaySummary").textContent = "Unknown";
+    else el("awaySummary").textContent = "Home";
+  }
+
+  if (el("awaySummaryNote")) {
+    if (!presence.trackerKnown) {
+      el("awaySummaryNote").textContent = `${PHONE_ENTITY} is unavailable or unknown`;
+    } else {
+      el("awaySummaryNote").textContent = `${PHONE_ENTITY}: ${presence.phoneState}`;
+    }
+  }
+
+  if (el("awayTimeNote")) {
+    el("awayTimeNote").textContent = presence.away
+      ? `Time away: ${presence.formattedAway}`
+      : "Time away: 0m";
+  }
+
+  if (el("leftHomeNote")) {
+    el("leftHomeNote").textContent =
+      presence.away || presence.leftHomeFormatted !== "--"
+        ? `Left home: ${presence.leftHomeFormatted}`
+        : "Left home: --";
+  }
+
+  if (el("awayModeNote")) {
+    el("awayModeNote").textContent =
+      `Heating mode: ${presence.selectedMode} · 15°C override: ${presence.heatingAway ? "Active" : "Inactive"}`;
+  }
+
+  const modeButtons = {
+    Automatic: el("modeAutomaticBtn"),
+    "Force Away": el("modeAwayBtn"),
+    "Force Home": el("modeHomeBtn")
+  };
+  Object.entries(modeButtons).forEach(([mode, button]) => {
+    if (!button) return;
+    button.classList.toggle("active-state", presence.selectedMode === mode);
+  });
+
+  root.innerHTML = "";
+  const grouped = zones.reduce((acc, zone) => { acc[zone.floor] ||= []; acc[zone.floor].push(zone); return acc; }, {});
+
+  for (const [floor, floorZones] of Object.entries(grouped)) {
+    const title = document.createElement("h2");
+    title.className = "floor-title";
+    title.textContent = floor;
+    root.appendChild(title);
+
+    const container = document.createElement("section");
+    container.className = "zones";
+    root.appendChild(container);
+
+    floorZones.forEach(zone => {
+      const roomTemp = zoneTemp(zone);
+      const heaterTemp = heaterSetNow(zone);
+      const rate = num(zone.rate);
+      const isAuto = isOn(zone.automation);
+      const manualLocked = isOn(zone.lockout);
+      const autoLocked = isOn(zone.autoLockout);
+      const anyLocked = manualLocked || autoLocked;
+      const contactOpen = zone.contacts.some(isOn);
+      const contactBad = zone.contacts.some(isInvalid);
+      const tempBad = isInvalid(zone.tempRef);
+      const activeInput = num(zone.inputs[curP]);
+      const roomTempClass = tempStateClass(zone, roomTemp, activeInput, isAuto, manualLocked, autoLocked);
+      const reasons = zoneInterlockReasons(zone);
+      const reasonLines = reasons.map(r => `<div class="reason ${r.type}">${escapeHtml(r.text)}</div>`).join("");
+      const heaterLines = zone.heaters.map(h => `<div><code>${h}</code> · ${escapeHtml(friendly(h))} · set now ${fmtTemp(Number(attr(h, "temperature")))} · ${escapeHtml(st(h))}</div>`).join("");
+      const sensorLines = (zone.sensors || []).map(s => `<div><code>${s}</code> · ${escapeHtml(friendly(s))} · ${fmtTemp(num(s))}</div>`).join("");
+      const contactLines = zone.contacts.length ? zone.contacts.map(c => `<div><code>${c}</code> · ${escapeHtml(friendly(c))} · ${isOn(c) ? "open" : escapeHtml(st(c))}</div>`).join("") : "<div>No outside door/window sensor used.</div>";
+      const card = document.createElement("article");
+      card.className = `zone ${anyLocked ? "locked" : ""} ${(contactOpen || contactBad || tempBad) ? "alarm" : ""} ${presence.away ? "away" : ""}`;
+
+      card.innerHTML = `
+        <div class="zone-top">
+          <div class="zone-name-wrap">
+            <div class="icon">${zone.icon}</div>
+            <div>
+              <div class="zone-title">${escapeHtml(zone.name)}</div>
+              <div class="active-input-pill ${curP}">
+                <div class="active-label">Active input to automation</div>
+                <div class="active-value">${curP} · ${fmtTemp(activeInput)}</div>
+              </div>
+            </div>
+          </div>
+          <div class="badges">
+            <span class="badge ${isAuto ? "on" : "off"}">${isAuto ? "Auto On" : "Auto Off"}</span>
+            ${manualLocked ? '<span class="badge off">Manual Lock</span>' : ''}
+            ${autoLocked ? '<span class="badge warn">Auto Lock</span>' : ''}
+            ${contactOpen ? '<span class="badge off">Contact Open</span>' : ''}
+            ${contactBad ? '<span class="badge off">Contact Bad</span>' : ''}
+            ${presence.away ? '<span class="badge blue">Physically Away</span>' : ''}
+            ${presence.forceAway ? '<span class="badge warn">Force Away</span>' : ''}
+            ${presence.forceHome ? '<span class="badge on">Force Home</span>' : ''}
+            ${presence.automaticAway ? '<span class="badge blue">Auto Away 24h</span>' : ''}
+          </div>
+        </div>
+
+        <div class="status-panel">
+          <div class="status-title">
+            <span>Interlock and away cause</span>
+            <span>${anyLocked ? "Active" : "Clear"}</span>
+          </div>
+          <div class="reason-list">${reasonLines}</div>
+        </div>
+
+        <div class="temps">
+          <div class="metric ${roomTempClass}"><div class="k">Room</div><div class="v">${fmtTemp(roomTemp)}</div></div>
+          <div class="metric"><div class="k">Heater Set</div><div class="v">${fmtTemp(heaterTemp)}</div></div>
+          <div class="metric rate-metric"><div class="k">Rate</div><div class="v">${fmtRate(rate)}</div></div>
+        </div>
+
+        <div class="setpoints">
+          ${Object.entries(zone.inputs).map(([periodName, entityId]) => `
+            <div class="sp ${periodName === curP ? "current-period" : ""}">
+              <label>${periodName}${periodName === curP ? " · active" : ""}</label>
+              <div class="stepper">
+                <button onclick="adjust('${entityId}', -1)">−</button>
+                <span class="sp-value">${fmtTemp(num(entityId))}</span>
+                <button onclick="adjust('${entityId}', 1)">+</button>
+              </div>
+            </div>`).join("")}
+        </div>
+
+        <div class="actions">
+          <button class="btn-action ${isAuto ? "active-state" : "inactive-state"}" onclick="toggle('${zone.automation}')">${isAuto ? "✅ Disable Auto" : "❌ Enable Auto"}</button>
+          <button class="btn-action ${manualLocked ? "inactive-state" : "active-state"}" onclick="toggle('${zone.lockout}')">${manualLocked ? "🔓 Clear Manual Lock" : "🔒 Force Manual Lock"}</button>
+          <button class="btn-action away-btn" onclick="setZoneTo('${escapeHtml(zone.name)}', ${AWAY_SETPOINT})">🌙 Zone 15°C</button>
+          <button class="btn-action home-btn" onclick="setZoneTo('${escapeHtml(zone.name)}', ${HOME_SETPOINT})">🏠 Zone 21°C</button>
+          <button class="btn-action primary" onclick="applyNow('${escapeHtml(zone.name)}')">🔥 Apply Active Input Now</button>
+        </div>
+
+        <details data-detail="${escapeHtml(zone.name)}" ${openDetails.has(zone.name) ? "open" : ""}>
+          <summary>Entity Details</summary>
+          <div class="entity-list">
+            <div><strong>Automation:</strong> <code>${zone.automation}</code> · ${escapeHtml(st(zone.automation))}</div>
+            <div><strong>Manual lockout:</strong> <code>${zone.lockout}</code> · ${escapeHtml(st(zone.lockout))}</div>
+            <div><strong>Auto lockout:</strong> <code>${zone.autoLockout}</code> · ${escapeHtml(st(zone.autoLockout))}</div>
+            <div><strong>Active input:</strong> <code>${zone.inputs[curP]}</code> · ${fmtTemp(activeInput)}</div>
+            <div><strong>Temp ref:</strong> <code>${zone.tempRef}</code> · ${fmtTemp(num(zone.tempRef))}</div>
+            <div><strong>Rate:</strong> <code>${zone.rate}</code> · ${fmtRate(rate)}</div>
+            <div><strong>Phone:</strong> <code>${PHONE_ENTITY}</code> · ${escapeHtml(st(PHONE_ENTITY))}</div>
+            <div><strong>Away tracking:</strong> <code>${AWAY_TRACKING_ENTITY}</code> · ${escapeHtml(st(AWAY_TRACKING_ENTITY))}</div>
+            <div><strong>Heating presence mode:</strong> <code>${HEATING_MODE_ENTITY}</code> · ${escapeHtml(presence.selectedMode)}</div>
+            <div><strong>Automatic away over 24h:</strong> <code>${AWAY_OVER_24H_ENTITY}</code> · ${escapeHtml(st(AWAY_OVER_24H_ENTITY))}</div>
+            <div><strong>Final heating away:</strong> <code>${HEATING_AWAY_ENTITY}</code> · ${escapeHtml(st(HEATING_AWAY_ENTITY))}</div>
+            <div><strong>Heating mode source:</strong> ${escapeHtml(presence.awayMode)}</div>
+            <div><strong>Time away:</strong> <code>${AWAY_TIME_ENTITY}</code> · ${escapeHtml(presence.formattedAway)}</div>
+            <div><strong>Left home:</strong> <code>${LEFT_HOME_ENTITY}</code> · ${escapeHtml(presence.leftHomeFormatted)}</div>
+            <div><strong>Away over 24h:</strong> <code>${AWAY_OVER_24H_ENTITY}</code> · ${escapeHtml(st(AWAY_OVER_24H_ENTITY))}</div>
+            <div><strong>Heaters:</strong></div>${heaterLines}
+            <div><strong>Temperature sensors:</strong></div>${sensorLines}
+            <div><strong>Doors/windows:</strong></div>${contactLines}
+          </div>
+        </details>`;
+      container.appendChild(card);
+    });
+  }
+
+  document.querySelectorAll("details[data-detail]").forEach(detail => {
+    detail.addEventListener("toggle", () => {
+      if (detail.open) openDetails.add(detail.dataset.detail);
+      else {
+        openDetails.delete(detail.dataset.detail);
+        if (!anyDetailsOpen()) render();
+      }
+    });
+  });
+}
+
+async function fetchStates() {
+  updateClock();
+  const data = [{"entity_id": "person.resident", "state": "not_home", "attributes": {"friendly_name": "Resident"}, "last_changed": "2026-06-20T12:05:23.436138Z", "last_updated": "2026-06-20T12:05:23.436138Z"}, {"entity_id": "input_datetime.resident_left_home", "state": "2026-06-20 12:05:23", "attributes": {"friendly_name": "Left Home"}, "last_changed": "2026-06-20T12:05:23.436138Z", "last_updated": "2026-06-20T12:05:23.436138Z"}, {"entity_id": "input_boolean.resident_away_tracking_active", "state": "on", "attributes": {"friendly_name": "Away Tracking Active"}, "last_changed": "2026-06-20T12:05:23.436138Z", "last_updated": "2026-06-20T12:05:23.436138Z"}, {"entity_id": "input_select.heating_presence_mode", "state": "Automatic", "attributes": {"friendly_name": "Heating Presence Mode", "options": ["Automatic", "Force Away", "Force Home"]}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.resident_time_away", "state": "31.4", "attributes": {"friendly_name": "Time Away", "formatted": "1d 7h 24m", "left_home_at": "2026-06-20 12:05:23"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "binary_sensor.resident_away_over_24_hours", "state": "on", "attributes": {"friendly_name": "Away Over 24 Hours"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "binary_sensor.heating_away_mode_active", "state": "on", "attributes": {"friendly_name": "Heating Away Mode Active"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "automation.guest_bedroom_heating_master", "state": "on", "attributes": {"friendly_name": "Guest Bedroom Heating Master"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.guest_bedroom_heating_lockout_manual", "state": "off", "attributes": {"friendly_name": "Guest Bedroom Manual Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.guest_bedroom_heating_lockout", "state": "on", "attributes": {"friendly_name": "Guest Bedroom Auto Lockout"}, "last_changed": "2026-06-21T19:28:23.436138Z", "last_updated": "2026-06-21T19:28:23.436138Z"}, {"entity_id": "sensor.guest_bedroom_average_temperature", "state": "20.3", "attributes": {"friendly_name": "Guest Bedroom Average Temperature", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.guest_bedroom_temperature_rate", "state": "-0.172", "attributes": {"friendly_name": "Guest Bedroom Temperature Rate", "unit_of_measurement": "°C/min"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "climate.guest_bedroom_heater", "state": "heat", "attributes": {"friendly_name": "Guest Bedroom Heater", "temperature": 15.0, "min_temp": 5, "max_temp": 35, "current_temperature": 20.3}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "binary_sensor.guest_bedroom_window_left", "state": "on", "attributes": {"friendly_name": "Guest Bedroom Window"}, "last_changed": "2026-06-21T19:28:23.436138Z", "last_updated": "2026-06-21T19:28:23.436138Z"}, {"entity_id": "binary_sensor.guest_bedroom_window_right", "state": "off", "attributes": {"friendly_name": "Guest Bedroom Window"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.guest_bedroom_temperature_primary", "state": "20.2", "attributes": {"friendly_name": "Guest Bedroom Temperature Sensor 1", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.guest_bedroom_temperature_secondary", "state": "20.4", "attributes": {"friendly_name": "Guest Bedroom Temperature Sensor 2", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.guest_bedroom_temp_morning", "state": "21.5", "attributes": {"friendly_name": "Guest Bedroom Morning", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.guest_bedroom_temp_midday", "state": "20.5", "attributes": {"friendly_name": "Guest Bedroom Midday", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.guest_bedroom_temp_evening", "state": "22.0", "attributes": {"friendly_name": "Guest Bedroom Evening", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.guest_bedroom_temp_night", "state": "19.0", "attributes": {"friendly_name": "Guest Bedroom Night", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "automation.main_bathroom_heating_master", "state": "on", "attributes": {"friendly_name": "Main Bathroom Heating Master"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.main_bathroom_heating_lockout_manual", "state": "off", "attributes": {"friendly_name": "Main Bathroom Manual Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.main_bathroom_heating_lockout", "state": "off", "attributes": {"friendly_name": "Main Bathroom Auto Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.main_bathroom_average_temperature", "state": "22.1", "attributes": {"friendly_name": "Main Bathroom Average Temperature", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.main_bathroom_temperature_rate", "state": "-0.008", "attributes": {"friendly_name": "Main Bathroom Temperature Rate", "unit_of_measurement": "°C/min"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "climate.main_bathroom_floor", "state": "heat", "attributes": {"friendly_name": "Main Bathroom Heater", "temperature": 15.0, "min_temp": 5, "max_temp": 35, "current_temperature": 22.1}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "binary_sensor.main_bathroom_window", "state": "off", "attributes": {"friendly_name": "Main Bathroom Window"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.guest_bedroom_temperature_primary", "state": "22.0", "attributes": {"friendly_name": "Main Bathroom Temperature Sensor 1", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.main_bathroom_temperature_secondary", "state": "22.2", "attributes": {"friendly_name": "Main Bathroom Temperature Sensor 2", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.main_bathroom_temp_morning", "state": "21.5", "attributes": {"friendly_name": "Main Bathroom Morning", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.main_bathroom_temp_midday", "state": "20.5", "attributes": {"friendly_name": "Main Bathroom Midday", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.main_bathroom_temp_evening", "state": "22.0", "attributes": {"friendly_name": "Main Bathroom Evening", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.main_bathroom_temp_night", "state": "19.0", "attributes": {"friendly_name": "Main Bathroom Night", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "automation.living_room_kitchen_heating_master", "state": "on", "attributes": {"friendly_name": "Living Room & Kitchen Heating Master"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.living_room_kitchen_heating_lockout_manual", "state": "off", "attributes": {"friendly_name": "Living Room & Kitchen Manual Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.living_room_kitchen_heating_lockout", "state": "off", "attributes": {"friendly_name": "Living Room & Kitchen Auto Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.living_room_kitchen_average_temperature", "state": "21.4", "attributes": {"friendly_name": "Living Room & Kitchen Average Temperature", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.living_room_kitchen_temperature_rate", "state": "0.002", "attributes": {"friendly_name": "Living Room & Kitchen Temperature Rate", "unit_of_measurement": "°C/min"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "climate.living_room_heater_left", "state": "heat", "attributes": {"friendly_name": "Living Room & Kitchen Heater", "temperature": 15.0, "min_temp": 5, "max_temp": 35, "current_temperature": 21.4}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "climate.living_room_heater_right", "state": "heat", "attributes": {"friendly_name": "Living Room & Kitchen Heater", "temperature": 15.0, "min_temp": 5, "max_temp": 35, "current_temperature": 21.4}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "binary_sensor.living_room_window", "state": "off", "attributes": {"friendly_name": "Living Room & Kitchen Window"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.living_room_temperature_secondary", "state": "21.2", "attributes": {"friendly_name": "Living Room & Kitchen Temperature Sensor 1", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.living_room_temperature_primary", "state": "21.5", "attributes": {"friendly_name": "Living Room & Kitchen Temperature Sensor 2", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.living_room_temperature_third", "state": "21.8", "attributes": {"friendly_name": "Living Room & Kitchen Temperature Sensor 3", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.kitchen_temperature", "state": "22.1", "attributes": {"friendly_name": "Living Room & Kitchen Temperature Sensor 4", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.living_room_kitchen_temp_morning", "state": "21.5", "attributes": {"friendly_name": "Living Room & Kitchen Morning", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.living_room_kitchen_temp_midday", "state": "20.5", "attributes": {"friendly_name": "Living Room & Kitchen Midday", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.living_room_kitchen_temp_evening", "state": "22.0", "attributes": {"friendly_name": "Living Room & Kitchen Evening", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.living_room_kitchen_temp_night", "state": "19.0", "attributes": {"friendly_name": "Living Room & Kitchen Night", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "automation.downstairs_bathroom_heating_master", "state": "on", "attributes": {"friendly_name": "Downstairs Bathroom Heating Master"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.downstairs_bathroom_heating_lockout_manual", "state": "off", "attributes": {"friendly_name": "Downstairs Bathroom Manual Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.downstairs_bathroom_heating_lockout", "state": "off", "attributes": {"friendly_name": "Downstairs Bathroom Auto Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.downstairs_bathroom_temperature", "state": "22.5", "attributes": {"friendly_name": "Downstairs Bathroom Average Temperature", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.downstairs_bathroom_temperature_rate", "state": "-0.001", "attributes": {"friendly_name": "Downstairs Bathroom Temperature Rate", "unit_of_measurement": "°C/min"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "climate.downstairs_bathroom_floor", "state": "heat", "attributes": {"friendly_name": "Downstairs Bathroom Heater", "temperature": 15.0, "min_temp": 5, "max_temp": 35, "current_temperature": 22.5}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.downstairs_bathroom_temperature", "state": "22.4", "attributes": {"friendly_name": "Downstairs Bathroom Temperature Sensor 1", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.downstairs_bathroom_temp_morning", "state": "21.5", "attributes": {"friendly_name": "Downstairs Bathroom Morning", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.downstairs_bathroom_temp_midday", "state": "20.5", "attributes": {"friendly_name": "Downstairs Bathroom Midday", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.downstairs_bathroom_temp_evening", "state": "22.0", "attributes": {"friendly_name": "Downstairs Bathroom Evening", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.downstairs_bathroom_temp_night", "state": "19.0", "attributes": {"friendly_name": "Downstairs Bathroom Night", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "automation.entryway_heating_master", "state": "on", "attributes": {"friendly_name": "Entryway Heating Master"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.entryway_heating_lockout_manual", "state": "off", "attributes": {"friendly_name": "Entryway Manual Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.entryway_heating_lockout", "state": "off", "attributes": {"friendly_name": "Entryway Auto Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.entryway_average_temperature", "state": "19.8", "attributes": {"friendly_name": "Entryway Average Temperature", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.entryway_temperature_rate", "state": "-0.014", "attributes": {"friendly_name": "Entryway Temperature Rate", "unit_of_measurement": "°C/min"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "climate.entryway_heater", "state": "heat", "attributes": {"friendly_name": "Entryway Heater", "temperature": 15.0, "min_temp": 5, "max_temp": 35, "current_temperature": 19.8}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "binary_sensor.entryway_door", "state": "off", "attributes": {"friendly_name": "Entryway Window"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.entryway_temperature_primary", "state": "19.7", "attributes": {"friendly_name": "Entryway Temperature Sensor 1", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.entryway_temperature_secondary", "state": "19.9", "attributes": {"friendly_name": "Entryway Temperature Sensor 2", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.entryway_temperature_third", "state": "20.2", "attributes": {"friendly_name": "Entryway Temperature Sensor 3", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.entryway_temp_morning", "state": "21.5", "attributes": {"friendly_name": "Entryway Morning", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.entryway_temp_midday", "state": "20.5", "attributes": {"friendly_name": "Entryway Midday", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.entryway_temp_evening", "state": "22.0", "attributes": {"friendly_name": "Entryway Evening", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.entryway_temp_night", "state": "19.0", "attributes": {"friendly_name": "Entryway Night", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "automation.main_bedroom_heating_master", "state": "on", "attributes": {"friendly_name": "Main Bedroom Heating Master"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.main_bedroom_heating_lockout_manual", "state": "off", "attributes": {"friendly_name": "Main Bedroom Manual Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_boolean.main_bedroom_heating_lockout", "state": "off", "attributes": {"friendly_name": "Main Bedroom Auto Lockout"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.main_bedroom_average_temperature", "state": "20.7", "attributes": {"friendly_name": "Main Bedroom Average Temperature", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.main_bedroom_temperature_rate", "state": "-0.004", "attributes": {"friendly_name": "Main Bedroom Temperature Rate", "unit_of_measurement": "°C/min"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "climate.main_bedroom_heater", "state": "heat", "attributes": {"friendly_name": "Main Bedroom Heater", "temperature": 15.0, "min_temp": 5, "max_temp": 35, "current_temperature": 20.7}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.main_bedroom_temperature_primary", "state": "20.6", "attributes": {"friendly_name": "Main Bedroom Temperature Sensor 1", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "sensor.main_bedroom_temperature_secondary", "state": "20.8", "attributes": {"friendly_name": "Main Bedroom Temperature Sensor 2", "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.main_bedroom_temp_morning", "state": "21.5", "attributes": {"friendly_name": "Main Bedroom Morning", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.main_bedroom_temp_midday", "state": "20.5", "attributes": {"friendly_name": "Main Bedroom Midday", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.main_bedroom_temp_evening", "state": "22.0", "attributes": {"friendly_name": "Main Bedroom Evening", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}, {"entity_id": "input_number.main_bedroom_temp_night", "state": "19.0", "attributes": {"friendly_name": "Main Bedroom Night", "min": 5, "max": 30, "step": 0.5, "unit_of_measurement": "°C"}, "last_changed": "2026-06-21T17:29:23.436138Z", "last_updated": "2026-06-21T17:29:23.436138Z"}];
+  stateMap.clear();
+  data.forEach(s => stateMap.set(s.entity_id, s));
+  if (el("haStatus")) { el("haStatus").textContent = "Demo Connected"; el("haStatus").className = "ok"; }
+  if (el("authCard")) el("authCard").classList.remove("show");
+  updateClock();
+  if (!anyDetailsOpen()) render();
+}
+
+async function callService(domain, service, data) { return { demo: true }; }
+
+async function callServiceAndRefresh(domain, service, data) {
+  await callService(domain, service, data);
+  await fetchStates();
+}
+
+async function setInputNumber(entityId, value) {
+  const minAllowed = numberAttr(entityId, "min", 5);
+  const maxAllowed = numberAttr(entityId, "max", 35);
+  const wanted = Math.min(Math.max(value, minAllowed), maxAllowed);
+  await callService("input_number", "set_value", { entity_id: entityId, value: wanted });
+}
+
+async function applyHeaterSetpoint(heater, value) {
+  await callService("climate", "set_hvac_mode", { entity_id: heater, hvac_mode: "heat" });
+  await callService("climate", "set_temperature", { entity_id: heater, temperature: value });
+}
+
+async function setHeatingPresenceMode(mode) {
+  try {
+    await callServiceAndRefresh("input_select", "select_option", {
+      entity_id: HEATING_MODE_ENTITY,
+      option: mode
+    });
+
+    const message = mode === "Force Away"
+      ? "15°C away override enabled. Automatic physical away tracking continues."
+      : mode === "Force Home"
+        ? "Away setback disabled. Every room now uses its own chosen scheduled setpoint."
+        : "Automatic mode enabled. The 15°C setback starts after 24 hours physically away.";
+
+    showToast("Heating presence mode updated", message, "ok");
+  } catch (error) {
+    console.error(error);
+    showToast("Could not change heating mode", "Home Assistant rejected the presence mode update.", "error");
+  }
+}
+
+async function setZoneTo(zoneName, value) {
+  const zone = zones.find(z => z.name === zoneName);
+  if (!zone) return;
+
+  try {
+    for (const entityId of Object.values(zone.inputs)) {
+      await setInputNumber(entityId, value);
+    }
+    for (const heater of zone.heaters) {
+      await applyHeaterSetpoint(heater, value);
+    }
+    await fetchStates();
+    showToast("Zone temperature mode applied", `${zone.name} schedule inputs and heaters were set to ${value.toFixed(1)}°C.`, "ok");
+  } catch (error) {
+    console.error(error);
+    showToast("Could not set zone temperature", `Home Assistant rejected the update for ${zone.name}.`, "error");
+  }
+}
+
+async function setAllZonesTo(value) {
+  try {
+    for (const zone of zones) {
+      for (const entityId of Object.values(zone.inputs)) {
+        await setInputNumber(entityId, value);
+      }
+    }
+    for (const zone of zones) {
+      for (const heater of zone.heaters) {
+        await applyHeaterSetpoint(heater, value);
+      }
+    }
+    await fetchStates();
+    showToast("Global temperature mode applied", `All zone schedule inputs and heaters were set to ${value.toFixed(1)}°C.`, "ok");
+  } catch (error) {
+    console.error(error);
+    showToast("Could not set all zones", "Home Assistant rejected one or more global updates.", "error");
+  }
+}
+
+async function adjust(entityId, direction) {
+  const current = num(entityId);
+  if (!Number.isFinite(current)) {
+    showToast("Invalid temperature value", `Could not read a valid value from ${entityId}.`, "error");
+    return;
+  }
+
+  const minAllowed = numberAttr(entityId, "min", 5);
+  const maxAllowed = numberAttr(entityId, "max", 35);
+  const stepRaw = numberAttr(entityId, "step", 0.5);
+  const step = stepRaw > 0 ? stepRaw : 0.5;
+  const decimals = Math.max(1, decimalsFromStep(step));
+  const wantedRaw = current + (direction * step);
+  const wanted = Number((Math.round(wantedRaw / step) * step).toFixed(decimals));
+
+  if (wanted < minAllowed) {
+    showToast("Minimum temperature set", `You tried to set ${wanted.toFixed(decimals)}°C, but the minimum allowed value is ${minAllowed.toFixed(decimals)}°C. Current value stays at ${current.toFixed(decimals)}°C.`, "warn");
+    return;
+  }
+
+  if (wanted > maxAllowed) {
+    showToast("Maximum temperature set", `You tried to set ${wanted.toFixed(decimals)}°C, but the maximum allowed value is ${maxAllowed.toFixed(decimals)}°C. Current value stays at ${current.toFixed(decimals)}°C.`, "warn");
+    return;
+  }
+
+  try {
+    await callServiceAndRefresh("input_number", "set_value", { entity_id: entityId, value: wanted });
+  } catch (error) {
+    console.error(error);
+    showToast("Could not adjust temperature", `Home Assistant rejected the update for ${entityId}.`, "error");
+  }
+}
+
+async function toggle(entityId) {
+  const domain = entityId.split(".")[0];
+  const service = isOn(entityId) ? "turn_off" : "turn_on";
+  try {
+    await callServiceAndRefresh(domain, service, { entity_id: entityId });
+  } catch (error) {
+    console.error(error);
+    showToast("Could not toggle entity", `Home Assistant rejected the toggle for ${entityId}.`, "error");
+  }
+}
+
+async function applyNow(zoneName) {
+  const zone = zones.find(z => z.name === zoneName);
+  if (!zone) return;
+  const value = num(zone.inputs[getPeriod()]);
+  if (!Number.isFinite(value)) {
+    showToast("Invalid active input", `Could not read the active input for ${zoneName}.`, "error");
+    return;
+  }
+  try {
+    for (const heater of zone.heaters) {
+      await applyHeaterSetpoint(heater, value);
+    }
+    await fetchStates();
+    showToast("Active input applied", `${zoneName} was set to ${value.toFixed(1)}°C.`, "ok");
+  } catch (error) {
+    console.error(error);
+    showToast("Could not apply active input", `Home Assistant rejected the update for ${zoneName}.`, "error");
+  }
+}
+
+const saveTokenBtn = el("saveTokenBtn");
+if (saveTokenBtn) {
+  saveTokenBtn.addEventListener("click", () => {
+    const value = el("tokenInput").value.trim();
+    if (!value) return;
+    localStorage.setItem(TOKEN_KEY, value);
+    el("tokenInput").value = "";
+    fetchStates();
+    showToast("Token saved", "Home Assistant token was saved locally in this browser.", "ok");
+  });
+}
+
+const clearTokenBtn = el("clearTokenBtn");
+if (clearTokenBtn) {
+  clearTokenBtn.addEventListener("click", () => {
+    localStorage.removeItem(TOKEN_KEY);
+    stateMap.clear();
+    if (el("haStatus")) {
+      el("haStatus").textContent = "Token cleared";
+      el("haStatus").className = "warn";
+    }
+    if (el("authCard")) el("authCard").classList.add("show");
+    render();
+    showToast("Token cleared", "Home Assistant token was removed from this browser.", "ok");
+  });
+}
+
+updateClock();
+render();
+fetchStates();
+setInterval(updateClock, 1000);
+setInterval(fetchStates, 10000);
+</script>
+</body>
+</html>

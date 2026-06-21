@@ -1,0 +1,62 @@
+alias: Presence - Away Tracking
+description: Maintains reusable physical-away tracking independently of heating overrides.
+triggers:
+  - trigger: state
+    entity_id: person.resident
+    from: home
+    to: not_home
+    id: left_home
+  - trigger: state
+    entity_id: person.resident
+    to: home
+    id: returned_home
+  - trigger: homeassistant
+    event: start
+    id: startup
+actions:
+  - choose:
+      - conditions: "{{ trigger.id == 'left_home' }}"
+        sequence:
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: input_datetime.resident_left_home
+            data:
+              datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.resident_away_tracking_active
+      - conditions: "{{ trigger.id == 'returned_home' }}"
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.resident_away_tracking_active
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'startup' }}"
+          - condition: state
+            entity_id: person.resident
+            state: home
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.resident_away_tracking_active
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'startup' }}"
+          - condition: state
+            entity_id: person.resident
+            state: not_home
+          - condition: state
+            entity_id: input_boolean.resident_away_tracking_active
+            state: "off"
+        sequence:
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: input_datetime.resident_left_home
+            data:
+              datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.resident_away_tracking_active
+mode: queued
+max: 10

@@ -1,0 +1,65 @@
+alias: Example Zone - Multiple Heaters
+description: Schedule control with away setback, temperature correction and optional window lockout.
+triggers:
+  - trigger: homeassistant
+    event: start
+  - trigger: time_pattern
+    minutes: /5
+  - trigger: state
+    entity_id:
+      - binary_sensor.heating_away_mode_active
+      - input_select.heating_presence_mode
+      - sensor.example_zone_average_temperature
+      - sensor.example_zone_temperature_rate
+      - binary_sensor.example_zone_window
+      - input_boolean.example_zone_heating_lockout_manual
+      - input_number.example_zone_temp_morning
+      - input_number.example_zone_temp_midday
+      - input_number.example_zone_temp_evening
+      - input_number.example_zone_temp_night
+actions:
+  - variables:
+      climate_entities:
+        - climate.example_zone_heater_left
+        - climate.example_zone_heater_right
+      temp_sensor: sensor.example_zone_average_temperature
+      manual_lockout: "{{ is_state('input_boolean.example_zone_heating_lockout_manual', 'on') }}"
+      window_open: "{{ is_state('binary_sensor.example_zone_window', 'on') }}"
+      away_active: "{{ is_state('binary_sensor.heating_away_mode_active', 'on') }}"
+      hour_min: "{{ now().strftime('%H:%M') }}"
+      scheduled_temp: >
+        {% if '08:00' <= hour_min < '12:00' %}
+          {{ states('input_number.example_zone_temp_morning') | float(21) }}
+        {% elif '12:00' <= hour_min < '15:00' %}
+          {{ states('input_number.example_zone_temp_midday') | float(20) }}
+        {% elif '15:00' <= hour_min < '22:00' %}
+          {{ states('input_number.example_zone_temp_evening') | float(21) }}
+        {% else %}
+          {{ states('input_number.example_zone_temp_night') | float(18) }}
+        {% endif %}
+      base_target: "{{ 15 if away_active else scheduled_temp | float }}"
+      current_temp: "{{ states(temp_sensor) | float(0) }}"
+      max_temp: 35
+      min_temp: 5
+      corrected_target: >
+        {% set delta = base_target | float - current_temp %}
+        {% if away_active %} 15
+        {% elif delta >= 2 %} {{ max_temp }}
+        {% elif delta >= 0.6 %} {{ [base_target | float + 5, max_temp] | min }}
+        {% elif delta >= 0.3 %} {{ [base_target | float + 3, max_temp] | min }}
+        {% elif delta > 0 %} {{ [base_target | float + 1, max_temp] | min }}
+        {% else %} {{ base_target }}
+        {% endif %}
+      wanted: "{{ min_temp if manual_lockout or window_open else corrected_target | float }}"
+  - action: climate.set_hvac_mode
+    target:
+      entity_id: "{{ climate_entities }}"
+    data:
+      hvac_mode: heat
+  - action: climate.set_temperature
+    target:
+      entity_id: "{{ climate_entities }}"
+    data:
+      temperature: "{{ wanted | float | round(1) }}"
+mode: queued
+max: 10

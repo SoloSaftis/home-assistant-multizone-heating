@@ -1,0 +1,90 @@
+# Generic helpers for Home Assistant Multi-Zone Heating
+# Merge these top-level sections into configuration.yaml.
+
+input_datetime:
+  resident_left_home:
+    name: Resident Left Home
+    has_date: true
+    has_time: true
+
+input_boolean:
+  resident_away_tracking_active:
+    name: Resident Away Tracking Active
+    icon: mdi:home-export-outline
+
+input_select:
+  heating_presence_mode:
+    name: Heating Presence Mode
+    options:
+      - Automatic
+      - Force Away
+      - Force Home
+    initial: Automatic
+    icon: mdi:home-thermometer-outline
+
+template:
+  - sensor:
+      - name: Resident Time Away
+        unique_id: resident_time_away
+        unit_of_measurement: h
+        device_class: duration
+        state_class: measurement
+        state: >
+          {% set active = is_state('input_boolean.resident_away_tracking_active', 'on') %}
+          {% set left = as_timestamp(states('input_datetime.resident_left_home'), 0) %}
+          {% if active and left > 0 %}
+            {{ ([as_timestamp(now()) - left, 0] | max / 3600) | round(2) }}
+          {% else %}
+            0
+          {% endif %}
+        attributes:
+          formatted: >
+            {% set active = is_state('input_boolean.resident_away_tracking_active', 'on') %}
+            {% set left = as_timestamp(states('input_datetime.resident_left_home'), 0) %}
+            {% if not active %}
+              Home
+            {% elif left <= 0 %}
+              Unknown
+            {% else %}
+              {% set seconds = [as_timestamp(now()) - left, 0] | max %}
+              {% set days = (seconds // 86400) | int %}
+              {% set hours = ((seconds % 86400) // 3600) | int %}
+              {% set minutes = ((seconds % 3600) // 60) | int %}
+              {% if days > 0 %}
+                {{ days }}d {{ hours }}h {{ minutes }}m
+              {% elif hours > 0 %}
+                {{ hours }}h {{ minutes }}m
+              {% else %}
+                {{ minutes }}m
+              {% endif %}
+            {% endif %}
+          tracker_state: "{{ states('person.resident') }}"
+          left_home_at: "{{ states('input_datetime.resident_left_home') }}"
+
+  - binary_sensor:
+      - name: Resident Away Over 24 Hours
+        unique_id: resident_away_over_24_hours
+        icon: mdi:home-clock-outline
+        state: >
+          {{ is_state('input_boolean.resident_away_tracking_active', 'on')
+             and states('sensor.resident_time_away') | float(0) >= 24 }}
+
+      - name: Heating Away Mode Active
+        unique_id: heating_away_mode_active
+        icon: mdi:home-thermometer-outline
+        state: >
+          {% set mode = states('input_select.heating_presence_mode') %}
+          {{ mode == 'Force Away'
+             or (mode == 'Automatic'
+                 and is_state('binary_sensor.resident_away_over_24_hours', 'on')) }}
+        attributes:
+          source: >
+            {% set mode = states('input_select.heating_presence_mode') %}
+            {% if mode == 'Force Away' %}
+              manual
+            {% elif mode == 'Automatic'
+                    and is_state('binary_sensor.resident_away_over_24_hours', 'on') %}
+              automatic
+            {% else %}
+              inactive
+            {% endif %}

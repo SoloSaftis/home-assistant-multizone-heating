@@ -1,3 +1,3 @@
-# v1.1.0
+# Version 1.1.1
 
-Public-ready generic release with dummy entities, focused YAML examples, responsive dashboard screenshots, and complete AI/manual onboarding documentation.
+Maintenance release adding the helper entities required by the example zone automations and improving dashboard layout safety. Long status text, entity IDs, badges and buttons now remain inside their cards on desktop and mobile.

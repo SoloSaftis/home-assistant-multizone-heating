@@ -1,0 +1,15 @@
+# Include with: input_boolean: !include input_booleans.yaml
+# Duplicate and rename this pair for every heating zone.
+
+example_zone_heating_lockout:
+  name: Example Zone Heating Automatic Lockout
+  icon: mdi:radiator-disabled
+
+example_zone_heating_lockout_manual:
+  name: Example Zone Heating Manual Lockout
+  icon: mdi:lock-alert-outline
+
+# Shared physical-away tracking state used by the presence automation.
+resident_away_tracking_active:
+  name: Resident Away Tracking Active
+  icon: mdi:home-export-outline

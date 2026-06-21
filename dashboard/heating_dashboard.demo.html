@@ -32,7 +32,7 @@
       --radius-md: 8px;
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; min-width: 0; }
 
     body {
       margin: 0;
@@ -47,6 +47,7 @@
 
     .topbar {
       display: flex;
+      min-width: 0;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
@@ -97,7 +98,7 @@
       padding: 14px;
       margin-bottom: 20px;
       display: grid;
-      grid-template-columns: 1fr auto auto auto;
+      grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(150px, auto));
       gap: 12px;
       align-items: center;
     }
@@ -112,10 +113,10 @@
       margin-bottom: 32px;
     }
 
-    .summary-card { padding: 16px; }
+    .summary-card { padding: 16px; overflow: hidden; }
     .summary-card .label { color: var(--muted); font-size: 11px; text-transform: uppercase; font-weight: 600; }
-    .summary-card .value { font-size: 28px; font-weight: 500; margin-top: 4px; }
-    .summary-card .note { font-size: 11px; color: var(--muted2); margin-top: 4px; line-height: 1.35; }
+    .summary-card .value { font-size: clamp(22px, 3vw, 28px); font-weight: 500; margin-top: 4px; overflow-wrap: anywhere; }
+    .summary-card .note { font-size: 11px; color: var(--muted2); margin-top: 4px; line-height: 1.35; overflow-wrap: anywhere; }
 
     .floor-title {
       margin: 32px 0 16px;
@@ -128,7 +129,7 @@
 
     .zones {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
       gap: 20px;
       align-items: start;
     }
@@ -138,6 +139,7 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+      overflow: hidden;
     }
 
     .zone.locked { border-color: rgba(243, 212, 121, 0.55); }
@@ -165,7 +167,7 @@
       flex: 0 0 auto;
     }
 
-    .zone-title { font-weight: 600; font-size: 16px; }
+    .zone-title { font-weight: 600; font-size: 16px; overflow-wrap: anywhere; }
 
     .active-input-pill {
       margin-top: 8px;
@@ -203,7 +205,9 @@
       font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
-      white-space: nowrap;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-align: center;
     }
 
     .badge.on { background: rgba(112, 224, 184, 0.1); color: var(--green); }
@@ -240,6 +244,7 @@
 
     .reason {
       padding: 7px 8px;
+      overflow-wrap: anywhere;
       border-radius: 7px;
       background: rgba(255,255,255,0.04);
       border-left: 3px solid var(--stroke);
@@ -278,6 +283,7 @@
 
     .metric .v {
       font-size: 20px;
+      max-width: 100%;
       font-weight: 600;
       margin-top: 4px;
       white-space: nowrap;
@@ -337,6 +343,8 @@
       border-radius: var(--radius-md);
       cursor: pointer;
       font-weight: 600;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     button:hover { background: #333; border-color: #444; }
@@ -356,7 +364,7 @@
 
     .actions {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
     }
 
@@ -394,6 +402,7 @@
       font-family: monospace;
       font-size: 11px;
       overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .toast-wrap {
@@ -439,6 +448,12 @@
     @keyframes toastIn {
       from { opacity: 0; transform: translateY(10px) scale(0.98); }
       to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 1050px) {
+      .global-actions { grid-template-columns: 1fr 1fr; }
+      .global-actions > div:first-child { grid-column: 1 / -1; }
+      .pills { justify-content: flex-start; }
     }
 
     @media (max-width: 720px) {

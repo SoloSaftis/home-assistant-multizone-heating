@@ -91,3 +91,12 @@ Heating equipment and frost protection can be safety-critical. Test thermostat l
 ## Dashboard authentication
 
 The dashboard stores a Home Assistant Long-Lived Access Token in browser local storage. Use it only on trusted devices and networks. Never commit a token to GitHub.
+
+## Required schedule and lockout helpers
+
+Every zone automation expects four schedule `input_number` helpers and two lockout `input_boolean` helpers. Version 1.1.1 now includes complete generic examples:
+
+* `examples/input_numbers.example.yaml`
+* `examples/input_booleans.example.yaml`
+
+Copy and rename the helper group once per zone, then use those exact entity IDs in the automation and dashboard.

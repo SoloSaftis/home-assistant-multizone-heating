@@ -45,7 +45,7 @@ Each zone card contains:
 
 ![Mobile dashboard](docs/images/dashboard-mobile.png)
 
-The layout collapses to one column on phones while retaining all controls and diagnostics.
+The layout collapses to one column on phones while retaining all controls and diagnostics. Long status text, entity IDs and buttons remain contained within their cards.
 
 ## What information you need
 
@@ -94,7 +94,7 @@ The dashboard stores a Home Assistant Long-Lived Access Token in browser local s
 
 ## Required schedule and lockout helpers
 
-Every zone automation expects four schedule `input_number` helpers and two lockout `input_boolean` helpers. Version 1.1.1 now includes complete generic examples:
+Every zone automation expects four schedule `input_number` helpers and two lockout `input_boolean` helpers. Version 1.1.2 includes complete generic examples and refreshed overflow-safe screenshots:
 
 * `examples/input_numbers.example.yaml`
 * `examples/input_booleans.example.yaml`

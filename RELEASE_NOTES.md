@@ -1,3 +1,5 @@
-# Version 1.1.1
+# Release notes 1.1.2
 
-Maintenance release adding the helper entities required by the example zone automations and improving dashboard layout safety. Long status text, entity IDs, badges and buttons now remain inside their cards on desktop and mobile.
+This maintenance release refreshes the complete public package with corrected dashboard screenshots and stronger responsive containment. Long interlock messages, entity IDs, values and controls remain inside their cards across desktop, tablet and mobile layouts.
+
+The release includes the full repository folder, not only replacement images.

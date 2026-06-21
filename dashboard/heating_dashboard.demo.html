@@ -43,7 +43,7 @@
       background-color: var(--ha-bg);
     }
 
-    .app { max-width: 1600px; margin: 0 auto; }
+    .app { width: 100%; max-width: 1600px; margin: 0 auto; overflow-x: clip; }
 
     .topbar {
       display: flex;
@@ -115,7 +115,9 @@
 
     .summary-card { padding: 16px; overflow: hidden; }
     .summary-card .label { color: var(--muted); font-size: 11px; text-transform: uppercase; font-weight: 600; }
-    .summary-card .value { font-size: clamp(22px, 3vw, 28px); font-weight: 500; margin-top: 4px; overflow-wrap: anywhere; }
+    .summary-card .value {
+      overflow-wrap: anywhere;
+      word-break: break-word; font-size: clamp(22px, 3vw, 28px); font-weight: 500; margin-top: 4px; overflow-wrap: anywhere; }
     .summary-card .note { font-size: 11px; color: var(--muted2); margin-top: 4px; line-height: 1.35; overflow-wrap: anywhere; }
 
     .floor-title {
@@ -189,7 +191,7 @@
       font-weight: 600;
     }
 
-    .active-value { font-size: 14px; font-weight: 600; margin-top: 2px; }
+    .active-value { font-size: 14px; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
 
     .badges {
       display: flex;
@@ -245,6 +247,8 @@
     .reason {
       padding: 7px 8px;
       overflow-wrap: anywhere;
+      word-break: break-word;
+      overflow-wrap: anywhere;
       border-radius: 7px;
       background: rgba(255,255,255,0.04);
       border-left: 3px solid var(--stroke);
@@ -283,6 +287,7 @@
 
     .metric .v {
       font-size: 20px;
+      max-width: 100%;
       max-width: 100%;
       font-weight: 600;
       margin-top: 4px;
@@ -360,7 +365,7 @@
       flex: 0 0 auto;
     }
 
-    .sp-value { font-weight: 600; font-size: 14px; white-space: nowrap; }
+    .sp-value { font-weight: 600; font-size: 14px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
     .actions {
       display: grid;
@@ -450,10 +455,13 @@
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    @media (max-width: 1050px) {
-      .global-actions { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 1100px) {
+      .topbar { align-items: flex-start; }
+      .global-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .global-actions > div:first-child { grid-column: 1 / -1; }
+      .global-actions button:last-child:nth-child(4) { grid-column: 1 / -1; }
       .pills { justify-content: flex-start; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 720px) {
@@ -462,6 +470,7 @@
       .pills { justify-content: flex-start; }
       .pill { white-space: normal; }
       .global-actions { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: 1fr; }
       .zones { grid-template-columns: 1fr; }
       .temps { grid-template-columns: 1fr; }
       .setpoints { grid-template-columns: 1fr; }
@@ -502,7 +511,7 @@
     </div>
   </section>
 
-  <section class="global-actions">
+  <section id="presenceControls" class="global-actions">
     <div>
       <div class="global-title">Heating presence mode</div>
       <div class="global-note">Automatic uses the 24-hour timer. Force Away uses 15°C. Force Home ignores the away setback and returns every room to its own chosen schedule without forcing 21°C.</div>
@@ -521,7 +530,7 @@
     <button class="btn-action home-btn" onclick="setAllZonesTo(21)">🏠 Set all schedules to 21°C</button>
   </section>
 
-  <section class="summary-grid">
+  <section id="summaryCards" class="summary-grid">
     <article class="summary-card">
       <div class="label">Active Zones</div>
       <div class="value" id="activeZones">0</div>

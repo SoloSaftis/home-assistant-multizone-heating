@@ -1,15 +1,12 @@
-# Home Assistant Multizone Heating v1.1.1
+# Home Assistant Multi-Zone Heating v1.1.2
 
-This maintenance release completes the generic setup files and improves the dashboard presentation.
+A screenshot and responsive-layout maintenance release.
 
-## Added
+## Improvements
 
-* Schedule `input_number` helper example
-* Automatic and manual lockout `input_boolean` helper example
+* Fresh screenshots generated from the populated demo dashboard
+* Corrected desktop, presence-control, zone-card and mobile captures
+* Improved containment for long status text, values, entity IDs and buttons
+* Full repository package included
 
-## Fixed
-
-* Text and controls overflowing card margins
-* Narrow desktop and mobile grid behavior
-* Long entity IDs and interlock messages
-* README screenshots
+See the README for setup, entity collection and AI-assisted customization instructions.
